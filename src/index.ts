@@ -55,8 +55,7 @@ async function submitMembership(request: Request, env: Env): Promise<Response> {
   const birthDate = typeof body.birthDate === "string" ? body.birthDate : "";
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   if (firstName.length < 2 || firstName.length > 80 || lastName.length < 2 || lastName.length > 80 || !validBirthDate(birthDate) || !validEmail(email) || body.consent !== true) return json({ error: "Kontrollo fushat dhe prano njoftimin e privatësisë." }, 400);
-  const id = crypto.randomUUID();
-  try { await env.DB.prepare("INSERT INTO membership_applications (id, first_name, last_name, birth_date, email) VALUES (?, ?, ?, ?, ?)").bind(id, firstName, lastName, birthDate, email).run(); }
+  try { await env.DB.prepare("INSERT INTO membership_applications (id, first_name, last_name, birth_date, email) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), firstName, lastName, birthDate, email).run(); }
   catch { return json({ error: "Nuk u ruajt aplikimi. Provo përsëri më vonë." }, 503); }
   const clubMessage = `<p>Aplikim i ri për anëtarësim në Gjakova Run Club.</p><ul><li>Emri: ${escapeHtml(firstName)} ${escapeHtml(lastName)}</li><li>Datëlindja: ${birthDate}</li><li>Email: ${escapeHtml(email)}</li></ul>`;
   const applicantMessage = `<p>Përshëndetje ${escapeHtml(firstName)},</p><p>E pranuam aplikimin tënd për anëtarësim në Gjakova Run Club. Klubi do ta shqyrtojë dhe do të të kontaktojë.</p>`;
@@ -68,18 +67,19 @@ function validEventDate(value: unknown): value is string {
   const date = new Date(`${value}T00:00:00Z`), today = new Date();
   if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value || date.getUTCDay() !== 0) return false;
   const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  const dayDiff = (date.getTime() - todayUtc) / 86400000;
-  return dayDiff >= 0 && dayDiff <= 7;
+  const daysAhead = (date.getTime() - todayUtc) / 86400000;
+  return daysAhead >= 0 && daysAhead <= 7;
 }
 async function attendance(request: Request, env: Env): Promise<Response> {
   if (request.method === "GET") {
-    const date = new URL(request.url).searchParams.get("date");
-    if (!validEventDate(date)) return json({ error: "Data e vrapimit nuk është e vlefshme." }, 400);
+    const eventDate = new URL(request.url).searchParams.get("date");
+    if (!validEventDate(eventDate)) return json({ error: "Data e vrapimit nuk është e vlefshme." }, 400);
     try {
-      const result = await env.DB.prepare("SELECT distance_km, COUNT(*) AS count FROM run_attendance WHERE event_date = ? GROUP BY distance_km").bind(date).all<{ distance_km: number; count: number }>();
+      await env.DB.prepare("DELETE FROM run_attendance WHERE event_date < date('now', '-30 days')").run();
+      const result = await env.DB.prepare("SELECT distance_km, COUNT(*) AS count FROM run_attendance WHERE event_date = ? GROUP BY distance_km").bind(eventDate).all<{ distance_km: number; count: number }>();
       const counts: Record<number, number> = { 3: 0, 6: 0 };
       for (const row of result.results || []) counts[row.distance_km] = row.count;
-      return json({ eventDate: date, counts });
+      return json({ eventDate, counts });
     } catch { return json({ error: "Pjesëmarrjet nuk mund të ngarkohen tani." }, 503); }
   }
   if (request.method !== "POST") return json({ error: "Metodë e palejuar." }, 405);
@@ -92,6 +92,7 @@ async function attendance(request: Request, env: Env): Promise<Response> {
   const distance = Number(body.distanceKm);
   if (firstName.length < 2 || firstName.length > 80 || lastName.length < 2 || lastName.length > 80 || ![3, 6].includes(distance) || !validEventDate(body.eventDate)) return json({ error: "Plotëso emrin, mbiemrin dhe zgjidh grupin 3 km ose 6 km." }, 400);
   try {
+    await env.DB.prepare("DELETE FROM run_attendance WHERE event_date < date('now', '-30 days')").run();
     await env.DB.prepare("INSERT INTO run_attendance (id, event_date, first_name, last_name, distance_km) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), body.eventDate, firstName, lastName, distance).run();
     return json({ ok: true });
   } catch { return json({ error: "Regjistrimi nuk u ruajt. Provo përsëri më vonë." }, 503); }
@@ -120,15 +121,7 @@ export default {
     else if (url.pathname === "/api/attendance") response = await attendance(request, env);
     else if (url.pathname === "/api/weather" && request.method === "GET") response = await weather();
     else if (url.pathname.startsWith("/api/")) response = json({ error: "Nuk u gjet." }, 404);
-    else {
-      response = await env.ASSETS.fetch(request);
-      if (url.pathname === "/" && response.ok) {
-        let html = await response.text();
-        html = html.replace("</head>", '  <link rel="stylesheet" href="/community.css">\n</head>');
-        html = html.replace("</body>", '  <script src="/community.js" defer></script>\n</body>');
-        response = new Response(html, { status: response.status, statusText: response.statusText, headers: response.headers });
-      }
-    }
+    else response = await env.ASSETS.fetch(request);
     return secure(response, request);
   },
 } satisfies ExportedHandler<Env>;
