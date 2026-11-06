@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#111216">
+  <title>Administrimi i aplikimeve | Gjakova Run Club</title>
+  <link rel="stylesheet" href="/admin.css">
+  <script src="/admin.js" defer></script>
+</head>
+<body>
+  <main class="admin-shell">
+    <header class="admin-header">
+      <a class="admin-brand" href="/"><span class="brand-mark">GRC</span><span>GJAKOVA <b>RUN CLUB</b><small>ADMINISTRIMI I APLIKIMEVE</small></span></a>
+      <button id="logout" class="quiet-button" type="button" hidden>Dil</button>
+    </header>
+    <section id="login-panel" class="login-card" aria-labelledby="login-title">
+      <p class="eyebrow">ZONË PRIVATE</p><h1 id="login-title">Hyr në panel</h1>
+      <p>Përdor token-in e administratorit të vendosur në Cloudflare Worker.</p>
+      <form id="login-form"><label for="admin-token">Admin token</label><input id="admin-token" type="password" autocomplete="current-password" required><button class="primary-button" type="submit">Hyr në panel <span>→</span></button><p id="login-error" class="message" role="status"></p></form>
+    </section>
+    <section id="applications-panel" hidden aria-labelledby="applications-title">
+      <div class="page-heading"><div><p class="eyebrow">ANËTARËSIMI</p><h1 id="applications-title">Aplikimet</h1><p class="subheading">Shqyrto aplikimet dhe kontakto aplikuesit manualisht përmes Gmail-it.</p></div><button id="refresh" class="quiet-button" type="button">Rifresko ↻</button></div>
+      <div class="toolbar"><label for="status-filter">Filtro sipas statusit</label><select id="status-filter"><option value="all">Të gjitha</option><option value="pending">Në pritje</option><option value="approved">Aprovuar</option><option value="rejected">Refuzuar</option></select><span id="result-count" class="result-count"></span></div>
+      <p id="panel-message" class="message" role="status" aria-live="polite"></p>
+      <div id="application-list" class="application-list"></div>
+    </section>
+  </main>
+  <dialog id="application-dialog" class="detail-dialog" aria-labelledby="detail-name">
+    <form method="dialog"><button class="dialog-close" aria-label="Mbyll">×</button></form>
+    <p class="eyebrow">DETAJET E APLIKIMIT</p><h2 id="detail-name"></h2><p id="detail-date" class="detail-meta"></p>
+    <dl id="detail-fields" class="detail-fields"></dl>
+    <label class="email-label" for="email-draft">Mesazhi për aplikuesin</label><textarea id="email-draft" rows="8"></textarea>
+    <div class="dialog-actions"><button id="save-status" class="primary-button" type="button">Ruaj statusin</button><a id="gmail-link" class="primary-button gmail-button" href="#" target="_blank" rel="noopener noreferrer">Hap draft në Gmail ↗</a></div>
+    <p class="detail-hint">Gmail hap një draft të ri; kontrolloje dhe shtype vetë “Dërgo”. Statusi ruhet veçmas.</p>
+    <p id="detail-message" class="message" role="status" aria-live="polite"></p>
+  </dialog>
+</body>
+</html>

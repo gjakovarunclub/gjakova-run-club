@@ -4,6 +4,7 @@ export interface Env {
   CLUB_EMAIL: string;
   RESEND_API_KEY?: string;
   VERIFIED_FROM_EMAIL?: string;
+  ADMIN_TOKEN?: string;
 }
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
@@ -42,6 +43,32 @@ async function readBoundedJson(request: Request): Promise<Record<string, unknown
 function sameOrigin(request: Request): boolean {
   try { const origin = request.headers.get("Origin"); return Boolean(origin && new URL(origin).origin === new URL(request.url).origin); }
   catch { return false; }
+}
+function adminAuthorized(request: Request, env: Env): boolean {
+  const token = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+  return Boolean(env.ADMIN_TOKEN && token && token === env.ADMIN_TOKEN);
+}
+async function adminApplications(request: Request, env: Env): Promise<Response> {
+  if (!env.ADMIN_TOKEN) return json({ error: "Paneli nuk është konfiguruar. Vendos ADMIN_TOKEN te Cloudflare." }, 503);
+  if (!sameOrigin(request)) return json({ error: "Kërkesë e palejuar." }, 403);
+  if (!adminAuthorized(request, env)) return json({ error: "Token-i i administratorit nuk është i vlefshëm." }, 401);
+  if (request.method === "GET") {
+    try {
+      const result = await env.DB.prepare("SELECT id, first_name, last_name, birth_date, email, status, created_at, reviewed_at FROM membership_applications ORDER BY created_at DESC LIMIT 500").all<{ id: string; first_name: string; last_name: string; birth_date: string; email: string; status: string; created_at: string; reviewed_at: string | null }>();
+      return json({ applications: result.results || [] });
+    } catch { return json({ error: "Nuk u ngarkuan aplikimet. Sigurohu që migrimi i statusit është aplikuar." }, 503); }
+  }
+  if (request.method !== "PATCH") return json({ error: "Metodë e palejuar." }, 405);
+  if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") return json({ error: "Formati i kërkesës nuk është i vlefshëm." }, 415);
+  const body = await readBoundedJson(request);
+  const id = typeof body?.id === "string" ? body.id : "";
+  const status = body?.status;
+  if (!id || !["pending", "approved", "rejected"].includes(String(status))) return json({ error: "Aplikimi ose statusi nuk është i vlefshëm." }, 400);
+  try {
+    const result = await env.DB.prepare("UPDATE membership_applications SET status = ?, reviewed_at = datetime('now') WHERE id = ?").bind(status, id).run();
+    if (!result.meta.changes) return json({ error: "Aplikimi nuk u gjet." }, 404);
+    return json({ ok: true });
+  } catch { return json({ error: "Statusi nuk u ruajt." }, 503); }
 }
 async function submitMembership(request: Request, env: Env): Promise<Response> {
   if (request.method !== "POST") return json({ error: "Metodë e palejuar." }, 405);
@@ -90,7 +117,7 @@ async function attendance(request: Request, env: Env): Promise<Response> {
   const firstName = typeof body.firstName === "string" ? body.firstName.trim() : "";
   const lastName = typeof body.lastName === "string" ? body.lastName.trim() : "";
   const distance = Number(body.distanceKm);
-  if (firstName.length < 2 || firstName.length > 80 || lastName.length < 2 || lastName.length > 80 || ![3, 6].includes(distance) || !validEventDate(body.eventDate)) return json({ error: "Plotëso emrin, mbiemrin dhe zgjidh grupin 3 km ose 6 km." }, 400);
+  if (firstName.length < 2 || firstName.length > 80 || lastName.length < 2 || lastName.length > 80 || ![3, 6].includes(distance) || !validEventDate(body.eventDate)) return json({ error: "Plotëso emrin, mbiemrin dhe zgjedh grupin 3 km ose 6 km." }, 400);
   try {
     await env.DB.prepare("DELETE FROM run_attendance WHERE event_date < date('now', '-30 days')").run();
     await env.DB.prepare("INSERT INTO run_attendance (id, event_date, first_name, last_name, distance_km) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), body.eventDate, firstName, lastName, distance).run();
@@ -119,6 +146,7 @@ export default {
     const url = new URL(request.url); let response: Response;
     if (url.pathname === "/api/membership") response = await submitMembership(request, env);
     else if (url.pathname === "/api/attendance") response = await attendance(request, env);
+    else if (url.pathname === "/api/admin/applications") response = await adminApplications(request, env);
     else if (url.pathname === "/api/weather" && request.method === "GET") response = await weather();
     else if (url.pathname.startsWith("/api/")) response = json({ error: "Nuk u gjet." }, 404);
     else response = await env.ASSETS.fetch(request);
