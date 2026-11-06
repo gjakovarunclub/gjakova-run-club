@@ -8,7 +8,6 @@ function nextRunDate(now = new Date()) {
   if (daysUntil === 0 && (p.hour > 11 || (p.hour === 11 && p.minute >= 0))) daysUntil = 7;
   const targetDay = new Date(localToday.getTime() + daysUntil * 86400000);
   const y = targetDay.getUTCFullYear(), m = targetDay.getUTCMonth() + 1, d = targetDay.getUTCDate();
-  // Convert the target Gjakova wall-clock time to UTC, accounting for seasonal timezone offset.
   let utc = new Date(Date.UTC(y, m - 1, d, 11));
   for (let i = 0; i < 2; i++) {
     const q = dateParts(utc);
@@ -28,26 +27,58 @@ const descriptions = { 0: "Kthjellët", 1: "Kryesisht kthjellët", 2: "Pjesëris
 async function loadWeather() {
   const card = document.querySelector("#weather-card");
   try {
-    const response = await fetch("/api/weather"); if (!response.ok) throw new Error("weather");
-    const data = await response.json(); const current = data.current;
-    const sundayIndex = data.daily.time.findIndex((date) => new Date(`${date}T12:00:00`).getDay() === 0 && date >= new Intl.DateTimeFormat("en-CA", { timeZone: zone }).format(new Date()));
+    const response = await fetch("/api/weather");
+    if (!response.ok) throw new Error("weather");
+    const data = await response.json();
+    const current = data.current;
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: zone }).format(new Date());
+    const sundayIndex = data.daily.time.findIndex((date) => new Date(`${date}T12:00:00`).getDay() === 0 && date >= today);
     const idx = sundayIndex >= 0 ? sundayIndex : Math.min(6, data.daily.time.length - 1);
     const sundayCode = data.daily.weather_code[idx];
     card.innerHTML = `<div class="current-weather"><span class="weather-icon">${Number(current.temperature_2m) > 24 ? "☀" : "◌"}</span><div><small>TANI NË GJAKOVË</small><strong>${Math.round(current.temperature_2m)}°C</strong><span>${descriptions[current.weather_code] || "Kushtet aktuale"}</span></div></div><div class="sunday-weather"><small>PARASHIKIMI PËR TË DIELËN · ${new Intl.DateTimeFormat("sq-XK", { day: "numeric", month: "long", timeZone: zone }).format(new Date(`${data.daily.time[idx]}T12:00:00`))}</small><strong>${descriptions[sundayCode] || "Parashikimi"}</strong><span>${Math.round(data.daily.temperature_2m_min[idx])}° – ${Math.round(data.daily.temperature_2m_max[idx])}°C</span><span>Mundësi reshjesh: ${data.daily.precipitation_probability_max[idx] ?? "—"}%</span><p>Parashikimi mund të ndryshojë; kontrolloje përsëri para vrapimit.</p></div>`;
-  } catch { card.innerHTML = `<p class="weather-error">Parashikimi i motit nuk mund të ngarkohet tani. Provo përsëri më vonë.</p>`; }
+  } catch {
+    card.innerHTML = `<p class="weather-error">Parashikimi i motit nuk mund të ngarkohet tani. Provo përsëri më vonë.</p>`;
+  }
 }
+
 document.querySelector("#membership-form").addEventListener("submit", async (event) => {
-  event.preventDefault(); const form = event.currentTarget, button = form.querySelector("button"), status = document.querySelector("#form-status");
-  button.disabled = true; status.textContent = "Duke dërguar aplikimin…";
+  event.preventDefault();
+  const form = event.currentTarget, button = form.querySelector("button"), status = document.querySelector("#form-status");
+  button.disabled = true;
+  status.textContent = "Duke dërguar aplikimin…";
   const fields = new FormData(form);
   const payload = { firstName: fields.get("firstName"), lastName: fields.get("lastName"), birthDate: fields.get("birthDate"), email: fields.get("email"), consent: fields.get("consent") === "on", website: fields.get("website") };
   try {
     const response = await fetch("/api/membership", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
-    const result = await response.json(); if (!response.ok) throw new Error(result.error || "Ndodhi një gabim.");
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Ndodhi një gabim.");
     status.textContent = result.emailConfigured ? "Faleminderit! Aplikimi u dërgua; kontrollo email-in për konfirmim." : "Faleminderit! Aplikimi u ruajt. Konfirmimi me email do të aktivizohet së shpejti.";
     form.reset();
-  } catch (error) { status.textContent = error.message || "Nuk u dërgua. Provo përsëri."; }
-  finally { button.disabled = false; }
+  } catch (error) {
+    status.textContent = error.message || "Nuk u dërgua. Provo përsëri.";
+  } finally {
+    button.disabled = false;
+  }
 });
+
+// Keep the privacy notice immediately available at the consent decision.
+const consentText = document.querySelector(".consent span");
+if (consentText) {
+  consentText.append(" ");
+  const privacyLink = document.createElement("a");
+  privacyLink.href = "/privacy.html";
+  privacyLink.textContent = "Lexo njoftimin e privatësisë.";
+  privacyLink.style.textDecoration = "underline";
+  consentText.append(privacyLink);
+}
+const footer = document.querySelector("footer");
+if (footer) {
+  const link = document.createElement("a");
+  link.href = "/privacy.html";
+  link.textContent = "Privatësia";
+  footer.append(link);
+}
 document.querySelector("#year").textContent = new Date().getFullYear();
-updateCountdown(); setInterval(updateCountdown, 1000); loadWeather();
+updateCountdown();
+setInterval(updateCountdown, 1000);
+loadWeather();
