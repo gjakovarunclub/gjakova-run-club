@@ -32,35 +32,35 @@
   }
 
   function ensureCommunitySection() {
-    const existing = document.querySelector("#club-weekly");
-    if (existing) return null;
+    if (document.querySelector("#club-weekly")) return;
     const target = document.querySelector("#vrapimi");
-    if (!target) return null;
+    if (!target) return;
     const date = nextRunDate();
     const section = createElement("section", "community-section");
     section.id = "club-weekly";
+    section.setAttribute("aria-labelledby", "club-weekly-title");
 
     const wrap = createElement("div", "community-wrap");
     const heading = createElement("div", "community-heading");
     heading.append(
-      createElement("p", "community-eyebrow", "PLANIFIKO JAVËN TËNDE"),
-      createElement("h2", "", "Vrapon këtë të diel?"),
-      createElement("p", "community-intro", "Zgjidh grupin dhe konfirmo pjesëmarrjen për këtë javë.")
+      createElement("p", "community-eyebrow", "E DIEL · ORA 11:00 · PARKU I QYTETIT"),
+      createElement("h2", "", "Bashkohu në vrapimin e radhës"),
+      createElement("p", "community-intro", "Zgjidh distancën dhe regjistro pjesëmarrjen. Na vjen mirë të vrapojmë së bashku.")
     );
+    heading.querySelector("h2").id = "club-weekly-title";
 
     const form = createElement("form", "rsvp-form");
     form.id = "attendance-form";
-
     const nameRow = createElement("div", "rsvp-name-row");
     [
       ["firstName", "Emri", "given-name", "Emri yt"],
       ["lastName", "Mbiemri", "family-name", "Mbiemri yt"]
-    ].forEach(([name, labelText, autoComplete, placeholder]) => {
+    ].forEach(([name, labelText, autocomplete, placeholder]) => {
       const label = createElement("label", "rsvp-field");
       label.append(createElement("span", "", labelText));
       const input = createElement("input");
       input.name = name;
-      input.autocomplete = autoComplete;
+      input.autocomplete = autocomplete;
       input.required = true;
       input.minLength = 2;
       input.maxLength = 80;
@@ -71,33 +71,28 @@
 
     const groupLabel = createElement("p", "rsvp-label", "ZGJIDH DISTANCËN");
     const choices = createElement("div", "distance-choices");
-    [
-      [3, "Ritëm i qetë"],
-      [6, "Ritëm i qëndrueshëm"]
-    ].forEach(([value, note]) => {
+    [[3, "Ritëm i qetë"], [6, "Ritëm i qëndrueshëm"]].forEach(([distance, pace]) => {
       const option = createElement("label", "distance-option");
       const radio = createElement("input");
       radio.type = "radio";
       radio.name = "distance";
-      radio.value = String(value);
+      radio.value = String(distance);
       radio.required = true;
       const copy = createElement("span", "distance-copy");
-      copy.append(createElement("strong", "", `${value} km`), createElement("small", "", note));
+      copy.append(createElement("strong", "", `${distance} km`), createElement("small", "", pace));
       option.append(radio, copy);
       choices.append(option);
     });
 
-    const submit = createElement("button", "rsvp-submit", "Po marr pjesë");
+    const submit = createElement("button", "rsvp-submit", "Konfirmo pjesëmarrjen");
     submit.type = "submit";
     const status = createElement("p", "rsvp-status");
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
-
     const counts = createElement("div", "attendance-counts");
     counts.setAttribute("aria-live", "polite");
-
-    const privacy = createElement("p", "rsvp-privacy", "Emri dhe grupi përdoren vetëm për organizimin e këtij vrapimi. ");
-    const privacyLink = createElement("a", "", "njoftimin e privatësisë");
+    const privacy = createElement("p", "rsvp-privacy", "Emri përdoret vetëm për organizimin e vrapimit. ");
+    const privacyLink = createElement("a", "", "Privatësia");
     privacyLink.href = "/privacy.html";
     privacy.append(privacyLink, document.createTextNode("."));
 
@@ -109,12 +104,12 @@
     async function refreshCounts() {
       try {
         const response = await fetch(`/api/attendance?date=${encodeURIComponent(date)}`);
-        if (!response.ok) throw new Error("fetch");
+        if (!response.ok) throw new Error("counts");
         const data = await response.json();
         counts.replaceChildren();
         [3, 6].forEach((distance) => {
-          const value = Number(data?.counts?.[distance] || 0);
-          counts.append(createElement("span", "count-pill", `${distance} km · ${value}`));
+          const count = Number(data?.counts?.[distance] || 0);
+          counts.append(createElement("span", "count-pill", `${distance} km · ${count} pjesëmarrës`));
         });
       } catch {
         counts.textContent = "Numri i pjesëmarrësve nuk mund të ngarkohet tani.";
@@ -139,8 +134,8 @@
           }),
         });
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "Regjistrimi nuk u krye.");
-        status.textContent = "U regjistrove për grupin e zgjedhur. Faleminderit!";
+        if (!response.ok) throw new Error(result.error || "Regjistrimi nuk u krye. Provo përsëri.");
+        status.textContent = "Regjistrimi u krye me sukses. Mirë se vjen!";
         form.reset();
         await refreshCounts();
       } catch (error) {
@@ -151,7 +146,6 @@
     });
 
     refreshCounts();
-    return section;
   }
 
   ensureCommunitySection();
