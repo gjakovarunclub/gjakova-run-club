@@ -8,7 +8,7 @@ function nextRunDate(now = new Date()) {
   const target = new Date(today.getTime() + days * 86400000);
   return `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, "0")}-${String(target.getUTCDate()).padStart(2, "0")}`;
 }
-const dateLabel = (iso) => new Intl.DateTimeFormat("sq-XK", { timeZone: zone, weekday: "long", day: "numeric", month: "long" }).format(new Date(`${iso}T12:00:00Z".replace("Z", "")));
+const dateLabel = (iso) => new Intl.DateTimeFormat("sq-XK", { timeZone: zone, weekday: "long", day: "numeric", month: "long" }).format(new Date(`${iso}T12:00:00Z`));
 function el(tag, className, text) { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; }
 function makeCommunitySection() {
   const section = el("section", "community-section");
@@ -56,7 +56,9 @@ function makeCommunitySection() {
   const privacyLink = el("a", "", "njoftimin e privatësisë"); privacyLink.href = "/privacy.html"; privacy.append(privacyLink, el("span", "", "."));
   grid.append(weather, rsvp);
   wrap.append(head, event, grid); section.append(wrap);
-  document.querySelector("main")?.append(section);
+  const existingWeather = document.querySelector("#mot");
+  if (existingWeather?.parentNode) existingWeather.after(section);
+  else document.querySelector("main")?.append(section);
   return { section, weather, eventDate: eventDetails.querySelector(".event-date"), form, status, counts };
 }
 const ui = makeCommunitySection();
@@ -97,7 +99,7 @@ async function loadAttendance() {
     if (!response.ok) return;
     const data = await response.json();
     ui.counts.replaceChildren();
-    for (const km of [3, 6]) ui.counts.append(el("span", "count-pill", `${km} km · ${data.counts[km] || 0} ${data.counts[km] === 1 ? "vrapues" : "vrapues"}`));
+    for (const km of [3, 6]) ui.counts.append(el("span", "count-pill", `${km} km · ${data.counts[km] || 0} vrapues`));
   } catch { ui.counts.textContent = ""; }
 }
 ui.form.addEventListener("submit", async (event) => {
