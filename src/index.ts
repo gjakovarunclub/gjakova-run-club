@@ -7,6 +7,7 @@ export interface Env {
 }
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
+const MAX_REQUEST_BYTES = 8 * 1024;
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
 
 function validEmail(value: string): boolean {
@@ -23,22 +24,60 @@ function validBirthDate(value: string): boolean {
 
 async function sendEmail(env: Env, to: string, subject: string, html: string): Promise<boolean> {
   if (!env.RESEND_API_KEY || !env.VERIFIED_FROM_EMAIL) return false;
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
-    body: JSON.stringify({ from: env.VERIFIED_FROM_EMAIL, to: [to], subject, html }),
-  });
-  return response.ok;
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
+      body: JSON.stringify({ from: env.VERIFIED_FROM_EMAIL, to: [to], subject, html }),
+    });
+    return response.ok;
+  } catch {
+    // The application is already saved; an email-provider outage must not lose that confirmation.
+    return false;
+  }
+}
+
+async function readBoundedJson(request: Request): Promise<Record<string, unknown> | null> {
+  const declaredLength = Number(request.headers.get("content-length") || 0);
+  if (declaredLength > MAX_REQUEST_BYTES || !request.body) return null;
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > MAX_REQUEST_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return null;
+  }
+  try {
+    const bytes = new Uint8Array(length);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
 }
 
 async function submitMembership(request: Request, env: Env): Promise<Response> {
   if (request.method !== "POST") return json({ error: "Metodë e palejuar." }, 405);
+  if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
+    return json({ error: "Formati i kërkesës nuk është i vlefshëm." }, 415);
+  }
   const origin = request.headers.get("Origin");
-  if (origin && new URL(origin).origin !== new URL(request.url).origin) return json({ error: "Kërkesë e palejuar." }, 403);
+  if (!origin || new URL(origin).origin !== new URL(request.url).origin) return json({ error: "Kërkesë e palejuar." }, 403);
 
-  let body: Record<string, unknown>;
-  try { body = await request.json() as Record<string, unknown>; }
-  catch { return json({ error: "Të dhënat nuk janë të vlefshme." }, 400); }
+  const body = await readBoundedJson(request);
+  if (!body) return json({ error: "Të dhënat nuk janë të vlefshme ose janë tepër të mëdha." }, 400);
 
   // Honeypot field: bots often fill hidden inputs; silently accept without storing.
   if (typeof body.website === "string" && body.website.trim()) return json({ ok: true });
@@ -59,9 +98,8 @@ async function submitMembership(request: Request, env: Env): Promise<Response> {
     return json({ error: "Nuk u ruajt aplikimi. Provo përsëri më vonë." }, 503);
   }
 
-  const safeName = firstName.replace(/[&<>"']/g, "");
   const clubMessage = `<p>Aplikim i ri për anëtarësim në Gjakova Run Club.</p><ul><li>Emri: ${escapeHtml(firstName)} ${escapeHtml(lastName)}</li><li>Datëlindja: ${birthDate}</li><li>Email: ${escapeHtml(email)}</li><li>ID: ${id}</li></ul>`;
-  const applicantMessage = `<p>Përshëndetje ${escapeHtml(safeName)},</p><p>E pranuam aplikimin tënd për anëtarësim në Gjakova Run Club. Klubi do ta shqyrtojë dhe do të të kontaktojë.</p><p>Vrapimet tona organizohen të dielave në ora 11:00. Takimi: Parku i Qytetit, Gjakovë.</p><p>Me respekt,<br>Gjakova Run Club</p>`;
+  const applicantMessage = `<p>Përshëndetje ${escapeHtml(firstName)},</p><p>E pranuam aplikimin tënd për anëtarësim në Gjakova Run Club. Klubi do ta shqyrtojë dhe do të të kontaktojë.</p><p>Vrapimet tona organizohen të dielave në ora 11:00. Takimi: Parku i Qytetit, Gjakovë.</p><p>Me respekt,<br>Gjakova Run Club</p>`;
   const [clubSent, applicantSent] = await Promise.all([
     sendEmail(env, env.CLUB_EMAIL, "Aplikim i ri – Gjakova Run Club", clubMessage),
     sendEmail(env, email, "E pranuam aplikimin tënd – Gjakova Run Club", applicantMessage),
@@ -71,6 +109,18 @@ async function submitMembership(request: Request, env: Env): Promise<Response> {
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
+}
+
+function secure(response: Response, request: Request): Response {
+  const headers = new Headers(response.headers);
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-Frame-Options", "DENY");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  headers.set("Cross-Origin-Resource-Policy", "same-origin");
+  headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests");
+  if (new URL(request.url).protocol === "https:") headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 async function weather(): Promise<Response> {
@@ -91,9 +141,11 @@ async function weather(): Promise<Response> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (url.pathname === "/api/membership") return submitMembership(request, env);
-    if (url.pathname === "/api/weather" && request.method === "GET") return weather();
-    if (url.pathname.startsWith("/api/")) return json({ error: "Nuk u gjet." }, 404);
-    return env.ASSETS.fetch(request);
+    let response: Response;
+    if (url.pathname === "/api/membership") response = await submitMembership(request, env);
+    else if (url.pathname === "/api/weather" && request.method === "GET") response = await weather();
+    else if (url.pathname.startsWith("/api/")) response = json({ error: "Nuk u gjet." }, 404);
+    else response = await env.ASSETS.fetch(request);
+    return secure(response, request);
   },
 } satisfies ExportedHandler<Env>;
