@@ -7,7 +7,7 @@
 
   const css = document.createElement("link");
   css.rel = "stylesheet";
-  css.href = "/community.css?v=2";
+  css.href = "/community.css?v=3";
   document.head.append(css);
 
   function nextRunDate(now = new Date()) {
@@ -24,6 +24,55 @@
     if (text !== undefined) node.textContent = text;
     return node;
   };
+  const externalLink = (href, className, label) => {
+    const link = el("a", className, label);
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    return link;
+  };
+
+  function addSocialGallery() {
+    if (document.querySelector("#club-social")) return;
+    const footer = document.querySelector("footer");
+    if (!footer) return;
+    const section = el("section", "social-section");
+    section.id = "club-social";
+    section.setAttribute("aria-labelledby", "club-social-title");
+    const wrap = el("div", "social-wrap");
+    const heading = el("div", "social-heading");
+    const text = el("div", "social-heading-copy");
+    text.append(
+      el("p", "social-kicker", "NA GJEN NË RRUGË"),
+      el("h2", "", "Jeta e klubit, në lëvizje"),
+      el("p", "social-intro", "Ndiq vrapimet, aktivitetet dhe momentet tona nga Gjakova në rrjetet sociale.")
+    );
+    text.querySelector("h2").id = "club-social-title";
+    const links = el("div", "social-links");
+    links.append(
+      externalLink("https://www.instagram.com/gjakovarunclub/", "social-link social-instagram", "Instagram ↗"),
+      externalLink("https://www.facebook.com/profile.php?id=61594135364983", "social-link social-facebook", "Facebook ↗")
+    );
+    heading.append(text, links);
+
+    const gallery = el("div", "social-gallery");
+    [
+      ["social-tile-run", "01", "Vrapojmë së bashku", "Takimi ynë i së dielës"],
+      ["social-tile-team", "02", "Një ekip, shumë ritme", "Të gjithë janë të mirëseardhur"],
+      ["social-tile-city", "03", "Gjakova në çdo hap", "Rrugët dhe energjia e qytetit"],
+    ].forEach(([style, number, title, caption]) => {
+      const tile = el("article", `social-tile ${style}`);
+      tile.append(el("span", "social-tile-number", number), el("span", "social-tile-mark", "GRC"));
+      const copy = el("div", "social-tile-copy");
+      copy.append(el("strong", "", title), el("span", "", caption));
+      tile.append(copy);
+      gallery.append(tile);
+    });
+    const note = el("p", "social-note", "Fotot e vrapimeve do të publikohen në këtë galeri. Deri atëherë, shiko postimet tona në Instagram ose Facebook.");
+    wrap.append(heading, gallery, note);
+    section.append(wrap);
+    footer.before(section);
+  }
 
   function addRsvp() {
     if (document.querySelector("#club-weekly")) return;
@@ -117,11 +166,10 @@
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: zone }).format(new Date());
     const dailyIndex = data.daily?.time?.findIndex((day) => new Date(`${day}T12:00:00Z`).getUTCDay() === 0 && day >= today) ?? -1;
     const i = dailyIndex >= 0 ? dailyIndex : Math.min(6, (data.daily?.time?.length || 1) - 1);
-    const forecastInfo = weatherInfo[data.daily?.weather_code?.[i]] || ["🌤️", "Parashikimi" ];
+    const forecastInfo = weatherInfo[data.daily?.weather_code?.[i]] || ["🌤️", "Parashikimi"];
     const forecast = el("div", "weather-live-forecast");
     forecast.append(el("span", "weather-forecast-icon", forecastInfo[0]));
-    const forecastCopy = el("span", "", `E diel · ${forecastInfo[1]} · ${Math.round(data.daily.temperature_2m_min[i])}°–${Math.round(data.daily.temperature_2m_max[i])}°C · ${data.daily.precipitation_probability_max[i] ?? "—"}% mundësi shiu`);
-    forecast.append(forecastCopy);
+    forecast.append(el("span", "", `E diel · ${forecastInfo[1]} · ${Math.round(data.daily.temperature_2m_min[i])}°–${Math.round(data.daily.temperature_2m_max[i])}°C · ${data.daily.precipitation_probability_max[i] ?? "—"}% mundësi shiu`));
     summary.append(top, stats, forecast);
     card.prepend(summary);
   }
@@ -136,8 +184,9 @@
       new MutationObserver(() => {
         if (!card.querySelector(".weather-live-summary")) decorateWeather(data);
       }).observe(card, { childList: true });
-    } catch { /* Leave the existing weather message visible if the forecast is unavailable. */ }
+    } catch { /* Leave existing weather status in place when the forecast is unavailable. */ }
   }
   addRsvp();
   addWeatherVisuals();
+  addSocialGallery();
 })();
