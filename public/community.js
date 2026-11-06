@@ -68,7 +68,7 @@
     text.querySelector("h2").id = "club-social-title";
     const links = el("div", "social-links"); links.append(externalLink("https://www.instagram.com/gjakovarunclub/", "social-link social-instagram", "Instagram ↗"), externalLink("https://www.facebook.com/profile.php?id=61594135364983", "social-link social-facebook", "Facebook ↗")); heading.append(text, links);
     const gallery = el("div", "social-gallery");
-    [["social-tile-run", "01", "Vrapojmë së bashku", "Takimi ynë i së dielës"], ["social-tile-team", "02", "Një ekip, shumë ritme", "Të gjithë janë të mirëseardhur"], ["social-tile-city", "03", "Gjakova në çdo hap", "Rrugët dhe energjia e qytetit"]].forEach(([style, number, title, caption]) => {
+    [["social-tile-run", "01", "Vrapojmë së bashku", "Takimi ynë i së dielës"], ["social-tile-team", "02", "Një ekip, shumë ritme", "Të gjithë janë të mirëseardhura"], ["social-tile-city", "03", "Gjakova në çdo hap", "Rrugët dhe energjia e qytetit"]].forEach(([style, number, title, caption]) => {
       const tile = el("article", `social-tile ${style}`); tile.append(el("span", "social-tile-number", number), el("span", "social-tile-mark", "GRC")); const copy = el("div", "social-tile-copy"); copy.append(el("strong", "", title), el("span", "", caption)); tile.append(copy); gallery.append(tile);
     });
     wrap.append(heading, gallery, el("p", "social-note", "Këto janë ilustrime të përkohshme, jo postime të drejtpërdrejta. Për fotografi dhe postimet e fundit, vizito Instagramin ose Facebook-un tonë.")); section.append(wrap); footer.before(section);
@@ -106,7 +106,7 @@
     currentRow.append(currentCopy, el("strong", "weather-live-temp", `${Math.round(data.current.temperature_2m)}°C`));
     const currentStats = el("div", "weather-live-stats"); currentStats.append(el("span", "", `Ndjesia ${Math.round(data.current.apparent_temperature)}°C`), el("span", "", `Era ${Math.round(data.current.wind_speed_10m)} km/h`));
     const sunday = el("article", "weather-panel weather-sunday"); sunday.append(el("span", "weather-live-icon", forecastInfo[0]));
-    const sundayCopy = el("div", "weather-live-copy"); sundayCopy.append(el("span", "weather-live-label", "PARASHIKIMI PËR TË DIELËN · 11:00"), el("strong", "weather-live-condition", forecastInfo[1]));
+    const sundayCopy = el("div", "weather-live-copy"); sundayCopy.append(el("span", "weather-live-label", "PARASHIKIMI PËR TË DIELËN"), el("strong", "weather-live-condition", forecastInfo[1]));
     sunday.append(sundayCopy, el("strong", "weather-live-temp", `${Math.round(data.daily.temperature_2m_min[i])}°–${Math.round(data.daily.temperature_2m_max[i])}°C`));
     const rain = el("div", "weather-rain-probability", `💧 Mundësi reshjesh: ${data.daily.precipitation_probability_max?.[i] ?? "—"}%`);
     summary.append(currentRow, currentStats, sunday, rain, el("p", "weather-disclaimer", "Parashikimi mund të ndryshojë; kontrolloje përsëri para vrapimit."));
