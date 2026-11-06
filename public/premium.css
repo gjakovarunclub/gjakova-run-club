@@ -1,0 +1,18 @@
+/* Premium sports-brand finishing: confident hierarchy, controlled motion, accessible interaction. */
+:root{--club-red:#ed2028;--club-black:#111216}
+.topbar{box-shadow:0 6px 24px #10111408}
+nav a{transition:color .18s ease,transform .18s ease}nav a:hover{transform:translateY(-1px)}
+.hero{isolation:isolate;background:radial-gradient(ellipse at 82% 45%,#e7e4dc 0%,#f3f1eb 38%,#f6f5f1 67%)}
+.hero::after{content:"";position:absolute;z-index:-1;top:-35%;right:22%;width:2px;height:175%;background:linear-gradient(180deg,transparent,#ed202827,transparent);transform:rotate(31deg);pointer-events:none}
+.hero-content>.eyebrow{display:inline-flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid #ed20282b;border-radius:999px;background:#ed20280a}
+.hero-content>.eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--club-red);box-shadow:0 0 0 4px #ed202818}
+.hero h1{letter-spacing:-.035em}.hero .button{box-shadow:0 9px 22px #ed202833}.hero-art img{transform:rotate(-2deg);transition:transform .35s ease,filter .35s ease}.hero-art img:hover{transform:rotate(0) scale(1.015);filter:drop-shadow(0 24px 28px #10111424)}
+.section-heading{margin-bottom:30px}.section-heading h2{letter-spacing:-.025em}.next-run,.weather-section,.tips-section,.join-section{position:relative}.countdown{border:1px solid #ffffff1a}.tip,.notice-card,.about-team,.form-card,.weather-panel{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}.tip:hover,.notice-card:hover,.weather-panel:hover{transform:translateY(-3px);box-shadow:0 15px 32px #10111412}
+.notices-section{background:linear-gradient(180deg,#fff 0%,#f6f5f1 100%)}.notice-card{position:relative;overflow:hidden;padding:24px;border-radius:14px;background:#fff;box-shadow:0 8px 22px #10111408}.notice-card::before{content:"";position:absolute;top:0;left:0;width:4px;height:100%;background:var(--club-red);transform:scaleY(.5);transform-origin:top;transition:transform .2s}.notice-card:hover::before{transform:scaleY(1)}
+.about-section{background:linear-gradient(120deg,#e9e7e0,#f1f0eb)}.about-copy{align-self:center}.about-copy h2{letter-spacing:-.03em}.about-team{box-shadow:0 14px 36px #1011140c}.about-team:hover{transform:translateY(-2px);box-shadow:0 18px 42px #10111414}
+.community-section{background-image:radial-gradient(ellipse at 8% 0%,rgba(237,32,40,.25),transparent 40%),linear-gradient(130deg,#101114 0%,#1c1e23 60%,#151619 100%)}.rsvp-form{box-shadow:0 24px 65px #0006}.distance-option:focus-within{outline:2px solid #ff777b;outline-offset:2px}
+.weather-live-summary{gap:14px}.weather-panel{box-shadow:0 6px 18px #10111408}.weather-panel:hover{border-color:#ed20284a}.weather-sunday{background:linear-gradient(135deg,#fff,#fff9f5)}.weather-rain-probability{display:flex;align-items:center;gap:8px}.weather-disclaimer{padding-top:2px}
+.social-section{background:linear-gradient(140deg,#f1f0eb,#e9e7e0)}.social-tile{box-shadow:0 12px 30px #10111418;transition:transform .22s ease,box-shadow .22s ease}.social-tile:hover{transform:translateY(-4px);box-shadow:0 19px 38px #10111424}.social-tile:before{transition:transform .35s ease}.social-tile:hover:before{transform:scale(1.045)}
+:focus-visible{outline:3px solid #ed2028;outline-offset:3px}button:focus-visible,a:focus-visible,input:focus-visible{outline-offset:3px}
+@media(max-width:760px){.hero::after{right:12%;opacity:.55}.hero-art img{transform:none}.hero-art img:hover{transform:scale(1.01)}.notice-card:hover,.weather-panel:hover,.tip:hover{transform:none}.social-tile:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
