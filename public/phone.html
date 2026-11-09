@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111216">
+  <meta name="description" content="Aplikacioni zyrtar i Gjakova Run Club — vrapojmë së bashku çdo të diel në Gjakovë.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gjakova Run Club">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <title>Gjakova Run Club · Aplikacioni</title>
+  <style>
+    *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;background:#111216;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}.app-bar{height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#111216;color:#fff;border-bottom:1px solid #ffffff20}.brand{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none;font-size:12px;font-weight:800;letter-spacing:.08em}.brand img{width:32px;height:32px;border-radius:50%}.brand b{color:#ed2028}.install{border:0;border-radius:7px;padding:9px 12px;background:#ed2028;color:#fff;font-size:12px;font-weight:750}.install[hidden]{display:none}.site-frame{width:100%;height:calc(100dvh - 56px - env(safe-area-inset-top));border:0;background:#f6f5f1;flex:1}.install-help{position:fixed;inset:auto 16px calc(16px + env(safe-area-inset-bottom));padding:16px;border:1px solid #ffffff20;border-radius:12px;background:#202126;color:white;font-size:14px;line-height:1.55;box-shadow:0 8px 32px #0008}.install-help button{float:right;border:0;background:transparent;color:white;font-size:20px}.offline{display:none;position:fixed;inset:auto 12px calc(12px + env(safe-area-inset-bottom));padding:10px;border-radius:8px;background:#202126;color:white;text-align:center;font-size:12px}.offline.show{display:block}@media(display-mode:standalone){.app-bar{height:50px}}
+  </style>
+</head>
+<body>
+  <header class="app-bar"><a class="brand" href="/phone.html"><img src="/icons/icon.svg" alt=""><span>GJAKOVA <b>RUN CLUB</b></span></a><button id="install" class="install" type="button" hidden>Instalo aplikacionin</button></header>
+  <iframe class="site-frame" title="Gjakova Run Club" src="/" allow="geolocation" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  <div id="offline" class="offline" role="status">Je jashtë internetit. Disa përmbajtje mund të mos ngarkohen.</div>
+  <script>
+    (()=>{let promptEvent;const button=document.querySelector('#install');window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();promptEvent=event;button.hidden=false});button.addEventListener('click',async()=>{if(promptEvent){promptEvent.prompt();await promptEvent.userChoice;promptEvent=null;button.hidden=true}else{document.querySelector('#help')?.remove();const help=document.createElement('div');help.id='help';help.className='install-help';help.innerHTML='<button aria-label="Mbyll">×</button><strong>Instalo Gjakova Run Club</strong><br>Në iPhone: shtyp Share dhe pastaj “Add to Home Screen”. Në Android: hap menynë ⋮ dhe zgjidh “Install app” ose “Add to Home screen”.';help.querySelector('button').onclick=()=>help.remove();document.body.append(help)}});window.addEventListener('appinstalled',()=>button.hidden=true);window.addEventListener('online',()=>document.querySelector('#offline').classList.remove('show'));window.addEventListener('offline',()=>document.querySelector('#offline').classList.add('show'));if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});})();
+  </script>
+</body>
+</html>
